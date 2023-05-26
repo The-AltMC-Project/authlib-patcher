@@ -66,12 +66,14 @@ public class Inject {
         }).start();
     }
 
-    public static URL getAuthServer(URL url) throws MalformedURLException {
-        return useCustomAuth ? new URL(url.toString().replace(originalAuthServer, authServerBase)) : url;
-    }
-
-    public static String getAuthServer(String string) {
-        return useCustomAuth ? string.replace(originalAuthServer, authServerBase) : string;
+    public static Object getAuthServer(Object url) throws MalformedURLException {
+        if (url instanceof URL) {
+            return useCustomAuth ? new URL(url.toString().replace(originalAuthServer, authServerBase)) : url;
+        } else if (url instanceof String) {
+            return useCustomAuth ? ((String) url).replace(originalAuthServer, authServerBase) : url;
+        }
+        Main.LOGGER.info("Could not determine what type to return (input: " + url.getClass().getName() + ")");
+        return null;
     }
 
 }
