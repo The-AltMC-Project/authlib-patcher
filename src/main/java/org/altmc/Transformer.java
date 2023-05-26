@@ -2,6 +2,7 @@ package org.altmc;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 
 import java.lang.instrument.ClassFileTransformer;
@@ -126,14 +127,15 @@ public class Transformer implements ClassFileTransformer {
                 for (MethodNode method : cn.methods) {
                     InsnList instructions = method.instructions;
                     for (AbstractInsnNode instruction : instructions) {
-                        if (instruction instanceof FieldInsnNode && (instruction.getOpcode() == 178 && ((FieldInsnNode) instruction).name.equals("JOIN_URL") || ((FieldInsnNode) instruction).name.equals("CHECK_URL"))) {
-                            instructions.insert(instruction, new MethodInsnNode(184, "org/altmc/Inject", "getAuthServer", "(Ljava/net/URL;)Ljava/net/URL;", false));
-                            break;
-                        } else if (instruction instanceof LdcInsnNode && instruction.getOpcode() == 18 && ((LdcInsnNode) instruction).cst.equals("https://sessionserver.mojang.com/session/minecraft/profile/")) {
-                            instructions.insert(instruction, new MethodInsnNode(184, "org/altmc/Inject", "getAuthServer", "(Ljava/net/URL;)Ljava/net/URL;", false));
+                        boolean isFieldNode = false;
+                        if ((isFieldNode = instruction instanceof FieldInsnNode && (instruction.getOpcode() == 178 && ((FieldInsnNode) instruction).name.equals("JOIN_URL") || ((FieldInsnNode) instruction).name.equals("CHECK_URL"))) || (instruction instanceof LdcInsnNode && instruction.getOpcode() == 18 && ((LdcInsnNode) instruction).cst instanceof String && ((String) ((LdcInsnNode) instruction).cst).startsWith(Inject.originalAuthServer))) {
+                            instructions.insert(instruction, new MethodInsnNode(184, "org/altmc/Inject", "getAuthServer", "(Ljava/lang/Object;)Ljava/lang/Object;", false));
+                            if (isFieldNode) {
+                                String type = ((FieldInsnNode) instruction).desc;
+                                instructions.insert(instruction.getNext(), new TypeInsnNode(Opcodes.CHECKCAST, type));
+                            }
                         }
                     }
-
                 }
                 Main.LOGGER.info("Patched " + className);
                 cn.accept(w);
