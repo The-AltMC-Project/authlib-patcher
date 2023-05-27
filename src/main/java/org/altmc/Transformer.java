@@ -127,13 +127,17 @@ public class Transformer implements ClassFileTransformer {
                 for (MethodNode method : cn.methods) {
                     InsnList instructions = method.instructions;
                     for (AbstractInsnNode instruction : instructions) {
-                        boolean isFieldNode = false;
-                        if ((isFieldNode = instruction instanceof FieldInsnNode && (instruction.getOpcode() == 178 && ((FieldInsnNode) instruction).name.equals("JOIN_URL") || ((FieldInsnNode) instruction).name.equals("CHECK_URL"))) || (instruction instanceof LdcInsnNode && instruction.getOpcode() == 18 && ((LdcInsnNode) instruction).cst instanceof String && ((String) ((LdcInsnNode) instruction).cst).startsWith(Inject.originalAuthServer))) {
-                            instructions.insert(instruction, new MethodInsnNode(184, "org/altmc/Inject", "getAuthServer", "(Ljava/lang/Object;)Ljava/lang/Object;", false));
+                        boolean isFieldNode;
+                        if ((isFieldNode = instruction instanceof FieldInsnNode && (instruction.getOpcode() == Opcodes.GETSTATIC && (((FieldInsnNode) instruction).name.equals("JOIN_URL") || ((FieldInsnNode) instruction).name.equals("CHECK_URL") || ((FieldInsnNode) instruction).name.equals("BASE_URL")))) || (instruction instanceof LdcInsnNode && instruction.getOpcode() == Opcodes.LDC && ((LdcInsnNode) instruction).cst instanceof String && ((String) ((LdcInsnNode) instruction).cst).startsWith(Inject.originalAuthServer))) {
+                            instructions.insert(instruction, new MethodInsnNode(Opcodes.INVOKESTATIC, "org/altmc/Inject", "getAuthServer", "(Ljava/lang/Object;)Ljava/lang/Object;", false));
+                            String type;
                             if (isFieldNode) {
-                                String type = ((FieldInsnNode) instruction).desc;
-                                instructions.insert(instruction.getNext(), new TypeInsnNode(Opcodes.CHECKCAST, type));
+                                type = ((FieldInsnNode) instruction).desc;
+                                type = type.substring(1, type.length() - 1);
+                            } else {
+                                type = ((LdcInsnNode) instruction).cst.getClass().getTypeName().replaceAll("\\.", "/");
                             }
+                            instructions.insert(instruction.getNext(), new TypeInsnNode(Opcodes.CHECKCAST, type));
                         }
                     }
                 }
